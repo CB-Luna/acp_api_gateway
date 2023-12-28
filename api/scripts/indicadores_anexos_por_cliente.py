@@ -174,7 +174,7 @@ def main():
                     id_existing_record = 0
                 else:
                     print(f"El DataFrame con id: ${cliente[0]} no contiene datos.")
-            spark.stop()
+            # spark.stop()
             return "Successfull Process", True
         else:
             resultado = "Fail to recover data from Supabase Client"

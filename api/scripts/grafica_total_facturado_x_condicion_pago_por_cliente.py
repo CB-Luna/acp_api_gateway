@@ -209,7 +209,7 @@ def main():
                         for record in id_existing_records:
                             supabase_client_out.table(supabase_table).delete().eq("id", record).execute() # Elimina registro
                     id_existing_record = 0
-            spark.stop()
+            # spark.stop()
             return "Successfull Process", True
         else:
             resultado = "Fail to recover data from Supabase Client"

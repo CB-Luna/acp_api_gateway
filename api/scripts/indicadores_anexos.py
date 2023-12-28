@@ -161,7 +161,7 @@ def main():
                         supabase_client_out.table(supabase_table).delete().eq("id", record).execute() # Elimina registro
             else:
                 print("El DataFrame no contiene datos.")
-            spark.stop()
+            # spark.stop()
             return "Successfull Process", True
         else:
             resultado = "Fail to recover data from Supabase Client"
