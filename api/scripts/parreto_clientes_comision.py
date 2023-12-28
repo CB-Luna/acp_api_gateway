@@ -16,29 +16,13 @@ from dateutil import tz
 spark = SparkSession.builder.appName("ParretoClientesComision").getOrCreate()
 # Crea un SQLContext a partir de la sesión de Spark
 sqlContext = SQLContext(spark)
-# Define el esquema personalizado
-schema = StructType([
-    StructField("factura_id", IntegerType(), False),
-    StructField("cliente_id", IntegerType(), False),
-    StructField("cliente", StringType(), False),
-    StructField("comision", FloatType(), False),
-    StructField("tasa_descuento", IntegerType(), False),
-    # El valor puede ser Null (True)
-    StructField("created_at", StringType(), True)
-])
 
-id_existing_records = []
-dictionary_existing_records = {"0-30" : 0, "31-45" : 0, "46-89" : 0, "90" : 0, ">90" : 0}
-id_existing_record = 0
-
-# Define la tabla donde se va a hacer el CRUD de Datos
-supabase_table = "parreto_clientes_comision"
 # Salida
 output_api_url = "https://jjowpbgpiznxequndnbt.supabase.co"
 output_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqb3dwYmdwaXpueGVxdW5kbmJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTgzNDUwMzYsImV4cCI6MjAxMzkyMTAzNn0.c9XF7TqAm2rphYNKyLAIvqWeGr9dHIpBv2Cbf-klBGE"
 supabase_client_out: Client = create_client(output_api_url, output_api_key)
 
-def actualizar_registro_cliente(id_cliente, id_existing_record, key, value, suma_comision):
+def actualizar_registro_cliente(id_cliente, id_existing_record, key, value, suma_comision, id_existing_records, supabase_table):
     """
     Función para actualizar o insertar un registro en Supabase para la tabla "parreto_clientes_comision".
 
@@ -48,6 +32,8 @@ def actualizar_registro_cliente(id_cliente, id_existing_record, key, value, suma
         key: nombre del cliente (string).
         value: tasa del cliente (int).
         suma_comision: suma de la comisión de acuerdo a la tasa del ciente (float)
+        id_existing_records: lista de id records ya existentes
+        supabase_table: nombre de la tabla de supabase donde se hace el CRUD de datos
     Returns:
         Null.
     """
@@ -77,6 +63,22 @@ def actualizar_registro_cliente(id_cliente, id_existing_record, key, value, suma
 # Función principal del Proceso
 def main():
     try:
+        # Define el esquema personalizado
+        schema = StructType([
+            StructField("factura_id", IntegerType(), False),
+            StructField("cliente_id", IntegerType(), False),
+            StructField("cliente", StringType(), False),
+            StructField("comision", FloatType(), False),
+            StructField("tasa_descuento", IntegerType(), False),
+            # El valor puede ser Null (True)
+            StructField("created_at", StringType(), True)
+        ])
+
+        id_existing_records = []
+        id_existing_record = 0
+
+        # Define la tabla donde se va a hacer el CRUD de Datos
+        supabase_table = "parreto_clientes_comision"
         # Entrada
         # API de todos los clientes
         input_api_url_clientes= "https://jjowpbgpiznxequndnbt.supabase.co/rest/v1/cliente?select=*"
@@ -151,7 +153,7 @@ def main():
                             id_existing_record = responseStoredData.data[0]["id"]
                         else:
                             print(f"No se pudieron recuperar valores {queryStoredData} de la tabla {supabase_table}")
-                        actualizar_registro_cliente(id_cliente, id_existing_record, row["cliente"], row["tasa_descuento"], row["suma_comision"])
+                        actualizar_registro_cliente(id_cliente, id_existing_record, row["cliente"], row["tasa_descuento"], row["suma_comision"], id_existing_records, supabase_table)
                         print(f"Tamaño de Lista de registros a eliminar: {len(id_existing_records)}")
                         if len(id_existing_records) > 0:
                             for record in id_existing_records:

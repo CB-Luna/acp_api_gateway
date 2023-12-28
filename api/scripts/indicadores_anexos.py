@@ -17,20 +17,7 @@ print("Inicio 1 Indicadores Anexos")
 spark = SparkSession.builder.appName("IndicadoresAnexos").getOrCreate()
 # Crea un SQLContext a partir de la sesión de Spark
 sqlContext = SQLContext(spark)
-# Define el esquema personalizado
-schema = StructType([
-    StructField("anexo_id", IntegerType(), False),
-    StructField("cliente_id", IntegerType(), False),
-    StructField("estatus", StringType(), False),
-    StructField("estatus_id", IntegerType(), False),
-    StructField("created_at", StringType(), False)
-])
 
-id_existing_records = []
-id_existing_record = 0
-
-# Define la tabla donde se va a hacer el CRUD de Datos
-supabase_table = "indicadores_anexos_dashboard"
 # Salida
 output_api_url = "https://jjowpbgpiznxequndnbt.supabase.co"
 output_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqb3dwYmdwaXpueGVxdW5kbmJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTgzNDUwMzYsImV4cCI6MjAxMzkyMTAzNn0.c9XF7TqAm2rphYNKyLAIvqWeGr9dHIpBv2Cbf-klBGE"
@@ -43,7 +30,7 @@ print("Inicio 2 Indicadores Anexos")
 # supabase_client_out = api_gateway_utils.create_supabase_client(output_api_url, output_api_key)
 
 
-def actualizar_registro_todos(id_existing_record, anexos_generados, anexos_aceptados, anexos_pagados, anexos_cancelados):
+def actualizar_registro_todos(id_existing_record, anexos_generados, anexos_aceptados, anexos_pagados, anexos_cancelados, id_existing_records, supabase_table):
     """
     Función para actualizar o insertar un registro en Supabase para la tabla "indicadores_anexos_dashboard".
 
@@ -53,6 +40,8 @@ def actualizar_registro_todos(id_existing_record, anexos_generados, anexos_acept
         anexos_aceptados: valor de anexos aceptados con enfoque general (int).
         anexos_pagados: valor de anexos pagados con enfoque general (int).
         anexos_cancelados: valor de anexos cancelados con enfoque general (int).
+        id_existing_records: lista de id records ya existentes
+        supabase_table: nombre de la tabla de supabase donde se hace el CRUD de datos
     Returns:
         Null.
     """
@@ -82,7 +71,20 @@ def actualizar_registro_todos(id_existing_record, anexos_generados, anexos_acept
 # Función principal del Proceso
 def main():
     try:
-        print("Entramos a Indicadores Anexos")
+        # Define el esquema personalizado
+        schema = StructType([
+            StructField("anexo_id", IntegerType(), False),
+            StructField("cliente_id", IntegerType(), False),
+            StructField("estatus", StringType(), False),
+            StructField("estatus_id", IntegerType(), False),
+            StructField("created_at", StringType(), False)
+        ])
+
+        id_existing_records = []
+        id_existing_record = 0
+
+        # Define la tabla donde se va a hacer el CRUD de Datos
+        supabase_table = "indicadores_anexos_dashboard"
         # Entrada
         # API de Entrada de Supabase
         input_api_url = "https://jjowpbgpiznxequndnbt.supabase.co/rest/v1/graf_anexo?select=*"
@@ -103,7 +105,6 @@ def main():
         # <<< EXTRACCIÓN >>>
         # Verifica si la solicitud de Entrada fue exitosa
         if input_response.status_code == 200:
-            print("Extracción Indicadores Anexos")
             # Guarda la respuesta JSON como una lista de diccionarios de usuarios
             responseJSON = input_response.json()
             # Convierte cada respuesta JSON en un objeto Row con el esquema definido
@@ -116,7 +117,6 @@ def main():
                 fechaCreacion= response.get("created_at", None))
                 for response in responseJSON]
             # <<< TRANSFORMACIÓN >>>
-            print("Transformación Indicadores Anexos")
             # Crea un DataFrame a partir de la lista de objetos Row y el esquema
             responseDF = sqlContext.createDataFrame(responseRow, schema=schema)
             # Convertir el campo "created_at" a un tipo de dato de fecha
@@ -131,7 +131,6 @@ def main():
             fecha_actual_fin = datetime.now(tz.tzutc()).strftime('%Y-%m-%dT23:59:59.%f%z')
             # Verifica si el DataFrame tiene contenido
             if responseDF.isEmpty() == False:
-                print("Calculos Indicadores Anexos")
                 # <<< CÁLCULOS >>>
                 # Filtra los registros donde el campo 'created_at' contenga la fecha de hoy (Generados)
                 anexos_generados = responseDF.count(responseDF["created_at"] == fecha_hoy)
@@ -154,7 +153,7 @@ def main():
                     id_existing_record = responseStoredData.data[0]["id"]
                 else:
                     print(f"No se pudieron recuperar valores {queryStoredData} de la tabla {supabase_table}")
-                actualizar_registro_todos(id_existing_record, anexos_generados, anexos_aceptados, anexos_pagados, anexos_cancelados)
+                actualizar_registro_todos(id_existing_record, anexos_generados, anexos_aceptados, anexos_pagados, anexos_cancelados, id_existing_records, supabase_table)
                 print(f"Tamaño de Lista de registros a eliminar: {len(id_existing_records)}")
                 if len(id_existing_records) > 0:
                     for record in id_existing_records:

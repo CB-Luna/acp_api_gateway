@@ -16,26 +16,13 @@ from dateutil import tz
 spark = SparkSession.builder.appName("IndicadoresDiasCreditoPorCliente").getOrCreate()
 # Crea un SQLContext a partir de la sesión de Spark
 sqlContext = SQLContext(spark)
-# Define el esquema personalizado
-schema = StructType([
-    StructField("factura_id", IntegerType(), False),
-    StructField("cliente_id", IntegerType(), False),
-    StructField("dias_pago", IntegerType(), False),
-    # El valor puede ser Null (True)
-    StructField("created_at", StringType(), True)
-])
 
-id_existing_records = []
-id_existing_record = 0
-
-# Define la tabla donde se va a hacer el CRUD de Datos
-supabase_table = "indicadores_dias_credito_dashboard"
 # Salida
 output_api_url = "https://jjowpbgpiznxequndnbt.supabase.co"
 output_api_key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impqb3dwYmdwaXpueGVxdW5kbmJ0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTgzNDUwMzYsImV4cCI6MjAxMzkyMTAzNn0.c9XF7TqAm2rphYNKyLAIvqWeGr9dHIpBv2Cbf-klBGE"
 supabase_client_out: Client = create_client(output_api_url, output_api_key)
 
-def actualizar_registro_cliente(id_cliente, cliente, id_existing_record, dias_credito_promedio):
+def actualizar_registro_cliente(id_cliente, cliente, id_existing_record, dias_credito_promedio, id_existing_records, supabase_table):
     """
     Función para actualizar o insertar un registro de un cliente en Supabase para la tabla "indicadores_dias_credito_dashboard".
 
@@ -43,6 +30,8 @@ def actualizar_registro_cliente(id_cliente, cliente, id_existing_record, dias_cr
         id_cliente: valor del id del cliente (int)
         id_existing_record: valor del registro existente que se va a actualizar (si aún no existe en la tabla su valor es 0) (int) 
         dias_credito_promedio: valor promedio de dias de crédito con enfoque general (float).
+        id_existing_records: lista de id records ya existentes
+        supabase_table: nombre de la tabla de supabase donde se hace el CRUD de datos
     Returns:
         Null.
     """
@@ -72,6 +61,20 @@ def actualizar_registro_cliente(id_cliente, cliente, id_existing_record, dias_cr
 # Función principal del Proceso
 def main():
     try:
+        # Define el esquema personalizado
+        schema = StructType([
+            StructField("factura_id", IntegerType(), False),
+            StructField("cliente_id", IntegerType(), False),
+            StructField("dias_pago", IntegerType(), False),
+            # El valor puede ser Null (True)
+            StructField("created_at", StringType(), True)
+        ])
+
+        id_existing_records = []
+        id_existing_record = 0
+
+        # Define la tabla donde se va a hacer el CRUD de Datos
+        supabase_table = "indicadores_dias_credito_dashboard"
         # Entrada
         # API de todos los clientes
         input_api_url_clientes= "https://jjowpbgpiznxequndnbt.supabase.co/rest/v1/cliente?select=*"
@@ -147,7 +150,7 @@ def main():
                         id_existing_record = responseStoredData.data[0]["id"]
                     else:
                         print(f"No se pudo recuperar el(los) valor(es) {queryStoredData} de la tabla {supabase_table}")
-                    actualizar_registro_cliente(cliente[0], cliente[1], id_existing_record, dias_credito_promedio)
+                    actualizar_registro_cliente(cliente[0], cliente[1], id_existing_record, dias_credito_promedio, id_existing_records, supabase_table)
                     print(f"Tamaño de Lista de registros a eliminar: {len(id_existing_records)}")
                     if len(id_existing_records) > 0:
                             for record in id_existing_records:
